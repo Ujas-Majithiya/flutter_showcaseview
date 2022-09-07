@@ -140,7 +140,7 @@ WidgetsBinding.instance.addPostFrameCallback((_) =>
 );
 ```
 
-If you want to disable barrier interaction then set `disableBarrierInteraction` parameter to true.  
+If you want to disable barrier interaction then set `disableBarrierInteraction` parameter to true.
 
 ```dart
 ShowCaseWidget(
