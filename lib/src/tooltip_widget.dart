@@ -20,10 +20,12 @@
  * SOFTWARE.
  */
 
+import 'dart:developer' as d;
 import 'dart:math';
 
 import 'package:flutter/material.dart';
 
+import 'extension.dart';
 import 'get_position.dart';
 import 'measure_size.dart';
 
@@ -87,6 +89,9 @@ class ToolTipWidget extends StatefulWidget {
 
 class _ToolTipWidgetState extends State<ToolTipWidget>
     with TickerProviderStateMixin {
+  static const double arrowWidth = 18.0;
+  static const double arrowHeight = 9.0;
+
   Offset? position;
 
   bool isArrowUp = false;
@@ -107,8 +112,8 @@ class _ToolTipWidgetState extends State<ToolTipWidget>
         position.dy + ((widget.position?.getHeight() ?? 0) / 2);
     final topPosition = position.dy - ((widget.position?.getHeight() ?? 0) / 2);
     return ((widget.screenSize?.height ?? MediaQuery.of(context).size.height) -
-        bottomPosition) <=
-        height &&
+                bottomPosition) <=
+            height &&
         topPosition >= height;
   }
 
@@ -134,8 +139,8 @@ class _ToolTipWidgetState extends State<ToolTipWidget>
     final titleLength = widget.title == null
         ? 0
         : _textSize(widget.title!, titleStyle).width +
-        widget.contentPadding!.right +
-        widget.contentPadding!.left;
+            widget.contentPadding!.right +
+            widget.contentPadding!.left;
     final descriptionLength = widget.description == null
         ? 0
         : (_textSize(widget.description!, descriptionStyle).width +
@@ -184,6 +189,51 @@ class _ToolTipWidgetState extends State<ToolTipWidget>
       space = 16;
     }
     return space;
+  }
+
+  List<Position> widgetPosition = [];
+
+  double _getAlignmentX() {
+    var left = _getLeft() == null
+        ? 0
+        : (widget.position!.getCenter() - (_getLeft() ?? 0));
+    var right = _getRight() == null
+        ? 0
+        : (widget.position!.getCenter() - (_getRight() ?? 0));
+
+    var sum = widget.container != null ? _getSpace() : left + right;
+
+    bool isLeft = widget.position!.getRect().center.dx <=
+        MediaQuery.of(context).size.width / 2;
+
+    var dx = (sum + (isLeft ? 0 : 0)) / tooltipWidth +
+        (isLeft ? -1 : 0);
+
+    if (widget.position!.getBottomCenter().dy >
+        MediaQuery.of(context).size.height / 2) {
+      dx = -dx;
+    }
+
+    if (widget.position!.getBottom() <
+        MediaQuery.of(context).size.height / 2 && sum > tooltipWidth) {
+      dx = -dx;
+    }
+
+    d.log('sum -> $sum');
+    d.log('tooltipWidth -> $tooltipWidth');
+    d.log('dx -> $dx');
+    d.log('${sum > tooltipWidth}');
+  //  d.log(' dx final ${sum > tooltipWidth ? isArrowUp ? -0.5 : 0.5 : dx}');
+    return dx;
+  }
+
+  double _getAlignmentY() {
+    var dy = isArrowUp
+        ? -1.0
+        : (MediaQuery.of(context).size.height / 2) < widget.position!.getTop()
+            ? -1.0
+            : 1.0;
+    return dy;
   }
 
   @override
@@ -253,7 +303,7 @@ class _ToolTipWidgetState extends State<ToolTipWidget>
         : widget.position!.getTop() + (contentOffsetMultiplier * 3);
 
     final num contentFractionalOffset =
-    contentOffsetMultiplier.clamp(-1.0, 0.0);
+        contentOffsetMultiplier.clamp(-1.0, 0.0);
 
     var paddingTop = isArrowUp ? 22.0 : 0.0;
     var paddingBottom = isArrowUp ? 0.0 : 27.0;
@@ -262,9 +312,6 @@ class _ToolTipWidgetState extends State<ToolTipWidget>
       paddingTop = 10;
       paddingBottom = 10;
     }
-
-    const arrowWidth = 18.0;
-    const arrowHeight = 9.0;
 
     if (widget.isTooltipDismissed) {
       _initialAnimationController.reverse();
@@ -279,10 +326,8 @@ class _ToolTipWidgetState extends State<ToolTipWidget>
           scale: _initialAnimation,
           alignment: widget.initialAnimationAlignment ??
               Alignment(
-                widget.overlayBounds.centerLeft.dx /
-                    MediaQuery.of(context).size.width,
-                widget.overlayBounds.topCenter.dy /
-                    MediaQuery.of(context).size.height,
+                _getAlignmentX(),
+                _getAlignmentY(),
               ),
           child: FractionalTranslation(
             translation: Offset(0.0, contentFractionalOffset as double),
@@ -296,29 +341,29 @@ class _ToolTipWidgetState extends State<ToolTipWidget>
                 child: Container(
                   padding: widget.showArrow
                       ? EdgeInsets.only(
-                    top: paddingTop - (isArrowUp ? arrowHeight : 0),
-                    bottom: paddingBottom - (isArrowUp ? 0 : arrowHeight),
-                  )
+                          top: paddingTop - (isArrowUp ? arrowHeight : 0),
+                          bottom: paddingBottom - (isArrowUp ? 0 : arrowHeight),
+                        )
                       : null,
                   child: Stack(
                     alignment: isArrowUp
                         ? Alignment.topLeft
                         : _getLeft() == null
-                        ? Alignment.bottomRight
-                        : Alignment.bottomLeft,
+                            ? Alignment.bottomRight
+                            : Alignment.bottomLeft,
                     children: [
                       if (widget.showArrow)
                         Positioned(
                           left: _getLeft() == null
                               ? null
                               : (widget.position!.getCenter() -
-                              (arrowWidth / 2) -
-                              (_getLeft() ?? 0)),
+                                  (arrowWidth / 2) -
+                                  (_getLeft() ?? 0)),
                           right: _getLeft() == null
                               ? (MediaQuery.of(context).size.width -
-                              widget.position!.getCenter()) -
-                              (_getRight() ?? 0) -
-                              (arrowWidth / 2)
+                                      widget.position!.getCenter()) -
+                                  (_getRight() ?? 0) -
+                                  (arrowWidth / 2)
                               : null,
                           child: CustomPaint(
                             painter: _Arrow(
@@ -340,7 +385,7 @@ class _ToolTipWidgetState extends State<ToolTipWidget>
                         ),
                         child: ClipRRect(
                           borderRadius:
-                          widget.borderRadius ?? BorderRadius.circular(8.0),
+                              widget.borderRadius ?? BorderRadius.circular(8.0),
                           child: GestureDetector(
                             onTap: widget.onTooltipTap,
                             child: Container(
@@ -357,18 +402,18 @@ class _ToolTipWidgetState extends State<ToolTipWidget>
                                     children: <Widget>[
                                       widget.title != null
                                           ? Text(
-                                        widget.title!,
-                                        style: widget.titleTextStyle ??
-                                            Theme.of(context)
-                                                .textTheme
-                                                .headline6!
-                                                .merge(
-                                              TextStyle(
-                                                color:
-                                                widget.textColor,
-                                              ),
-                                            ),
-                                      )
+                                              widget.title!,
+                                              style: widget.titleTextStyle ??
+                                                  Theme.of(context)
+                                                      .textTheme
+                                                      .headline6!
+                                                      .merge(
+                                                        TextStyle(
+                                                          color:
+                                                              widget.textColor,
+                                                        ),
+                                                      ),
+                                            )
                                           : const SizedBox(),
                                       Text(
                                         widget.description!,
@@ -377,10 +422,10 @@ class _ToolTipWidgetState extends State<ToolTipWidget>
                                                 .textTheme
                                                 .subtitle2!
                                                 .merge(
-                                              TextStyle(
-                                                color: widget.textColor,
-                                              ),
-                                            ),
+                                                  TextStyle(
+                                                    color: widget.textColor,
+                                                  ),
+                                                ),
                                       ),
                                     ],
                                   )
@@ -408,10 +453,8 @@ class _ToolTipWidgetState extends State<ToolTipWidget>
               scale: _initialAnimation,
               alignment: widget.initialAnimationAlignment ??
                   Alignment(
-                    widget.overlayBounds.centerLeft.dx /
-                        MediaQuery.of(context).size.width,
-                    widget.overlayBounds.topCenter.dy /
-                        MediaQuery.of(context).size.height,
+                    _getAlignmentX(),
+                    _getAlignmentY(),
                   ),
               child: FractionalTranslation(
                 translation: Offset(0.0, contentFractionalOffset as double),
@@ -457,11 +500,11 @@ class _ToolTipWidgetState extends State<ToolTipWidget>
 
   Size _textSize(String text, TextStyle style) {
     final textPainter = (TextPainter(
-        text: TextSpan(text: text, style: style),
-        maxLines: 1,
-        textScaleFactor: MediaQuery.of(context).textScaleFactor,
-        textDirection: TextDirection.ltr)
-      ..layout())
+            text: TextSpan(text: text, style: style),
+            maxLines: 1,
+            textScaleFactor: MediaQuery.of(context).textScaleFactor,
+            textDirection: TextDirection.ltr)
+          ..layout())
         .size;
     return textPainter;
   }
@@ -475,9 +518,9 @@ class _Arrow extends CustomPainter {
 
   _Arrow(
       {this.strokeColor = Colors.black,
-        this.strokeWidth = 3,
-        this.paintingStyle = PaintingStyle.stroke,
-        this.isUpArrow = true});
+      this.strokeWidth = 3,
+      this.paintingStyle = PaintingStyle.stroke,
+      this.isUpArrow = true});
 
   @override
   void paint(Canvas canvas, Size size) {

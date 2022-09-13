@@ -105,4 +105,10 @@ class GetPosition {
   double getCenter() {
     return (getLeft() + getRight()) / 2;
   }
+
+  Offset getBottomCenter() {
+    final box = key!.currentContext!.findRenderObject() as RenderBox;
+    final boxOffset = box.localToGlobal(const Offset(0.0, 0.0));
+    return box.size.bottomCenter(boxOffset);
+  }
 }
